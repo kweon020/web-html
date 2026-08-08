@@ -1,0 +1,34 @@
+# 비밀키 — 절대 커밋하지 말 것
+.env
+.env.*
+!.env.example
+*.key
+secrets.*
+
+# 페이퍼/실거래 상태 파일 (계좌 정보 포함)
+data/paper_state.json
+data/*_state.json
+
+# 수집한 시세 데이터 (용량이 큼, 언제든 다시 받을 수 있음)
+data/*.csv
+data/*.parquet
+
+# 리포트 결과
+reports/*.json
+reports/*.png
+reports/*.html
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# 에디터
+.vscode/
+.idea/
+.DS_Store
