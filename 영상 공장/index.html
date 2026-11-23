@@ -1,0 +1,452 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>영상 공장</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a studio catalogue. Sticky filter bar over a card grid; picking a card raises a clapperboard-striped order slip from the bottom. */
+:root {
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --fg: #15171c;
+  --muted: #5a616d;
+  --line: #d8dce3;
+  --chip: #e2e5ea;
+  --accent: #ffcb2e;          /* slate yellow */
+  --accent-ink: #15171c;      /* text on accent */
+  --accent-text: #7a5a00;     /* accent used as text on bg */
+  --ok: #1f7a4d;
+  --shadow: 0 10px 30px rgba(20, 24, 33, .16);
+  --f-display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111317; --surface: #1a1d23; --fg: #eceef2; --muted: #9aa1ad; --line: #2a2f38; --chip: #23272f;
+    --accent: #ffcb2e; --accent-ink: #15171c; --accent-text: #ffd65c; --ok: #5fd39a;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .5); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111317; --surface: #1a1d23; --fg: #eceef2; --muted: #9aa1ad; --line: #2a2f38; --chip: #23272f;
+  --accent: #ffcb2e; --accent-ink: #15171c; --accent-text: #ffd65c; --ok: #5fd39a;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 var(--f-body);
+  word-break: keep-all; overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg);
+}
+.wrap {
+  max-width: 1320px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- header ---------- */
+header { padding-block: 28px 14px; }
+.head-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.mark {
+  width: 46px; height: 46px; flex: none; border-radius: 8px; background: var(--fg);
+  position: relative; overflow: hidden;
+}
+.mark::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 15px;
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 7px, var(--fg) 7px 14px);
+}
+.mark::after {
+  content: ""; position: absolute; left: 9px; right: 9px; bottom: 9px; height: 13px;
+  border-top: 2px solid var(--bg); border-bottom: 2px solid var(--bg); opacity: .55;
+}
+h1 { font: 400 clamp(30px, 5vw, 42px)/1 var(--f-display); margin: 0; letter-spacing: -.01em; }
+.sub { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.sub b { color: var(--fg); font-weight: 600; }
+.search {
+  position: relative; flex: 1 1 280px; max-width: 420px;
+}
+.search input {
+  width: 100%; height: 46px; padding: 0 40px 0 42px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.search input::placeholder { color: var(--muted); }
+.search svg { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); }
+.search .clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px;
+}
+.search .clear:hover { background: var(--chip); color: var(--fg); }
+
+/* ---------- filter bar ---------- */
+.filters {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.chips {
+  display: flex; gap: 8px; overflow-x: auto; padding-block: 12px; scrollbar-width: thin;
+}
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
+  border-radius: 999px; border: 1px solid transparent; background: var(--chip); cursor: pointer; white-space: nowrap;
+  font-size: 14px; font-weight: 500;
+}
+.chip:hover { border-color: var(--line); }
+.chip .ct { font: 500 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.chip[aria-pressed="true"] .ct { color: var(--accent); }
+
+.status { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-block: 16px 4px; color: var(--muted); font-size: 13px; }
+.status b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- grid ---------- */
+main { padding-block: 8px 48px; }
+body.docked main { padding-bottom: 330px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 18px; }
+.card {
+  display: flex; flex-direction: column; text-align: left; padding: 0; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; min-width: 0;
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent); }
+.thumb { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--chip); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.num {
+  position: absolute; left: 8px; top: 8px; padding: 2px 7px; border-radius: 4px;
+  background: rgba(10, 11, 14, .72); color: #fff; font: 500 11px var(--f-mono); letter-spacing: .04em;
+}
+.gen {
+  position: absolute; right: 8px; top: 8px; padding: 2px 8px; border-radius: 4px;
+  background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 600;
+}
+.body { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; flex: 1; min-width: 0; }
+.cat { font-size: 12px; color: var(--accent-text); font-weight: 600; letter-spacing: .02em; }
+.name { font: 400 21px/1.2 var(--f-display); margin: 0; text-wrap: balance; }
+.en { font-size: 12px; color: var(--muted); margin-top: -3px; }
+.uses { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.uses span { font-size: 12px; padding: 2px 8px; border-radius: 5px; background: var(--chip); color: var(--fg); }
+.empty { padding: 64px 16px; text-align: center; color: var(--muted); }
+.empty b { display: block; color: var(--fg); font: 400 24px var(--f-display); margin-bottom: 6px; }
+
+/* ---------- order slip (dock) ---------- */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  background: var(--surface); box-shadow: 0 -12px 40px rgba(0, 0, 0, .22);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transform: translateY(0); transition: transform .25s ease;
+}
+.dock[hidden] { display: block !important; transform: translateY(110%); visibility: hidden; }
+.stripe { height: 12px; background: repeating-linear-gradient(-45deg, var(--fg) 0 12px, var(--accent) 12px 24px); }
+.dock .wrap { padding-block: 16px 18px; max-height: min(70vh, 520px); overflow-y: auto; }
+.slip { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px 24px; align-items: start; }
+.pick { display: flex; flex-direction: column; gap: 8px; min-width: 0; grid-row: span 2; }
+.pick img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; display: block; background: var(--chip); }
+.pick .meta { font: 500 11px var(--f-mono); color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+.pick .title { font: 400 24px/1.15 var(--f-display); margin: 0; }
+.close {
+  position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: 22px;
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 18px; line-height: 1;
+}
+.close:hover { background: var(--chip); }
+.fields { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 14px 20px; align-items: end; padding-right: 44px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label, .field .lab { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
+.field input[type="text"] {
+  height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); width: 100%;
+}
+.field input[type="text"].warn { border-color: #d9443a; box-shadow: 0 0 0 3px color-mix(in srgb, #d9443a 25%, transparent); }
+.len-row { display: flex; align-items: center; gap: 12px; height: 44px; }
+.len-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.len-val { font: 500 18px var(--f-mono); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+.len-val small { font-size: 12px; color: var(--muted); margin-left: 2px; }
+.ratios { display: flex; gap: 6px; }
+.ratio {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  width: 64px; height: 52px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); cursor: pointer;
+  font: 500 12px var(--f-mono);
+}
+.ratio i { display: block; border: 2px solid currentColor; border-radius: 2px; }
+.ratio[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.ratio[aria-pressed="true"] i { border-color: var(--accent); }
+
+.out { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; grid-column: 2; }
+.sentence {
+  flex: 1 1 320px; min-width: 0; margin: 0; padding: 12px 14px; border-radius: 8px;
+  background: var(--bg); border: 1px dashed var(--line); font-size: 15px; line-height: 1.5;
+  user-select: all; -webkit-user-select: all;
+}
+.sentence mark { background: none; color: var(--accent-text); font-weight: 600; }
+.sentence .ph { color: var(--muted); font-weight: 400; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 8px;
+  font-weight: 600; font-size: 14px; cursor: pointer; text-decoration: none; white-space: nowrap; border: 1px solid transparent;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.ghost { background: transparent; border-color: var(--line); color: var(--fg); }
+.btn.ghost:hover { background: var(--chip); }
+.btn svg { width: 16px; height: 16px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); z-index: 60;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 500;
+  transition: opacity .2s, transform .2s; width: max-content; max-width: calc(100vw - 32px); text-align: center;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.dock:not([hidden]) ~ .toast { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 24px); }
+
+@media (max-width: 880px) {
+  .slip { grid-template-columns: 1fr; }
+  .pick { flex-direction: row; align-items: center; gap: 12px; padding-right: 44px; grid-row: auto; }
+  .pick img { width: 112px; flex: none; }
+  .fields { grid-template-columns: 1fr; padding-right: 0; }
+  .out { grid-column: 1; }
+  body.docked main { padding-bottom: 560px; }
+}
+@media (max-width: 480px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .name { font-size: 18px; }
+  .uses span:nth-child(n+3) { display: none; }
+  .btn { flex: 1; justify-content: center; }
+  .btns { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+</style>
+
+<header class="wrap">
+  <div class="head-row">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"></div>
+      <div>
+        <h1>영상 공장</h1>
+        <p class="sub">Lemo-Opuscar 화풍 <b id="total">100</b>가지 중에서 하나를 골라, 영상 요청 문구를 만드세요.</p>
+      </div>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="화풍 이름이나 용도로 검색 (예: 수채, 뉴스, 제품)" autocomplete="off" aria-label="화풍 검색">
+      <button class="clear" id="clear" type="button" aria-label="검색어 지우기" hidden>×</button>
+    </div>
+  </div>
+</header>
+
+<nav class="filters" aria-label="분야">
+  <div class="wrap"><div class="chips" id="chips" role="toolbar"></div></div>
+</nav>
+
+<main class="wrap">
+  <div class="status">
+    <span id="count"></span>
+    <span class="legend"><span class="gen" style="position:static">✦</span> 이미지 생성기가 따로 필요한 화풍</span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden><b>맞는 화풍이 없어요</b>다른 검색어를 쓰거나 분야를 ‘전체’로 바꿔 보세요.</div>
+</main>
+
+<section class="dock" id="dock" hidden aria-label="영상 요청서">
+  <div class="stripe" aria-hidden="true"></div>
+  <div class="wrap" style="position:relative">
+    <button class="close" id="close" type="button" aria-label="요청서 닫기">×</button>
+    <div class="slip">
+      <div class="pick">
+        <img id="d-img" alt="">
+        <div>
+          <div class="meta" id="d-meta"></div>
+          <p class="title" id="d-name"></p>
+        </div>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <label for="topic">영상 주제</label>
+          <input id="topic" type="text" placeholder="예: 우리 동네 빵집 개업" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="len">길이</label>
+          <div class="len-row">
+            <input id="len" type="range" min="15" max="90" step="5" value="40" aria-describedby="len-val">
+            <span class="len-val" id="len-val">40<small>초</small></span>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lab" id="ratio-lab">화면 비율</span>
+          <div class="ratios" role="group" aria-labelledby="ratio-lab">
+            <button class="ratio" type="button" data-r="9:16" aria-pressed="true"><i style="width:11px;height:19px"></i>9:16</button>
+            <button class="ratio" type="button" data-r="16:9" aria-pressed="false"><i style="width:24px;height:14px"></i>16:9</button>
+            <button class="ratio" type="button" data-r="1:1" aria-pressed="false"><i style="width:16px;height:16px"></i>1:1</button>
+          </div>
+        </div>
+      </div>
+      <div class="out">
+        <p class="sentence" id="sentence" aria-live="polite"></p>
+        <div class="btns">
+          <button class="btn primary" id="copy" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            요청 문구 복사
+          </button>
+          <a class="btn ghost" id="demo" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+            데모 영상 보기
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  var DATA = {"styles":[{"s":"caption-news","n":"01","ko":"자막 뉴스","en":"Caption News","cn":"字幕新闻","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["소셜 뉴스","보고서 해설","데이터 숏폼"],"ue":["Social news","Report explainers","Data shorts"],"film":"The Bee Ledger","line":"America lost 1.3 million bee colonies, yet the count rose 6 %: a news short that works with the sound off.","dur":60,"gen":false,"img":"thumbs/caption-news.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/caption-news/"},{"s":"newsreel","n":"02","ko":"1920년대 뉴스릴","en":"1920s Newsreel","cn":"1920s 新闻影片","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["역사 이야기","유행과 시대","기념일"],"ue":["History stories","Fads & eras","Anniversaries"],"film":"Knock-Knee Alert","line":"1926: the papers say the Charleston will ruin America's knees; at Ford's own picnic the kids dance it anyway.","dur":55,"gen":false,"img":"thumbs/newsreel.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/newsreel/"},{"s":"countdown","n":"03","ko":"실시간 카운트다운 분할 화면","en":"Live Countdown Split-screen","cn":"实时倒计时分屏","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["출시","카운트다운","라이브 이벤트"],"ue":["Launches","Countdowns","Live events"],"film":"Counting Itself Down","line":"The last minute of the Artemis II launch, uncut: one cell opens to nine, and they merge into one at ignition.","dur":60,"gen":false,"img":"thumbs/countdown.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/countdown/"},{"s":"city-symphony","n":"04","ko":"도시 교향곡","en":"City Symphony","cn":"城市交响曲","aka":["Time-lapse Symphony","延时交响"],"c":"Edit & Documentary","ck":"편집·다큐","u":["도시 영상","음악 몽타주","오프닝"],"ue":["City films","Music montages","Openers"],"film":"One Day in New York","line":"One day in New York in time-lapse: rivers of light, a grid on the sixteenths, 1899 beside today.","dur":52,"gen":false,"img":"thumbs/city-symphony.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/city-symphony/"},{"s":"visual-investigation","n":"05","ko":"시각 탐사 보도","en":"Visual Investigation","cn":"视觉调查","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["사건 재구성","팩트체크","사고 보고"],"ue":["Reconstructions","Fact-checks","Incident reports"],"film":"The Hindenburg: Four Minutes, 32 Seconds","line":"Newsreel, photos, testimony and the 1937 inquiry on one clock: five sources point to the same spot.","dur":60,"gen":false,"img":"thumbs/visual-investigation.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/visual-investigation/"},{"s":"kino-montage","n":"06","ko":"구성주의 몽타주","en":"Constructivist Montage","cn":"构成主义蒙太奇","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["산업의 역사","이정표","함께 이룬 성과"],"ue":["Industry histories","Milestones","Collective effort"],"film":"410 Days","line":"The Empire State's 1931 brochure credits its builders; the site film and Hine's photos answer: 2,500 a day.","dur":60,"gen":false,"img":"thumbs/kino-montage.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/kino-montage/"},{"s":"telestrator","n":"07","ko":"스포츠 전술 판서","en":"Sports Telestrator","cn":"体育战术板","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["스포츠 분석","경기 리캡","코칭"],"ue":["Sports analysis","Match recaps","Coaching"],"film":"Freeze Frame","line":"Down 3–0 at half-time, Fenerbahçe scored three in 12 minutes: freeze, draw, split screen, shot map.","dur":54,"gen":false,"img":"thumbs/telestrator.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/telestrator/"},{"s":"news-package","n":"08","ko":"방송 뉴스 패키지","en":"Broadcast News Package","cn":"电视新闻包装","aka":[],"c":"Edit & Documentary","ck":"편집·다큐","u":["뉴스 요약","뉴스 속보","시황"],"ue":["News round-ups","Bulletins","Market updates"],"film":"The Week in AI","line":"Four AI stories from one week in a full on-air package: rundown, headline strap, price board, spec card.","dur":54,"gen":false,"img":"thumbs/news-package.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/news-package/"},{"s":"crayon-book","n":"09","ko":"크레용 그림책","en":"Crayon Picture Book","cn":"蜡笔儿童绘本","aka":[],"c":"Painting & Illustration","ck":"회화·일러스트","u":["그림책","잠자리 동화","어린이 학습"],"ue":["Picture books","Bedtime stories","Kids' learning"],"film":"The Moon Can't Sleep","line":"The moon can't sleep, so a little girl climbs onto the roof to sing it a lullaby.","dur":52,"gen":false,"img":"thumbs/crayon-book.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/crayon-book/"},{"s":"watercolor","n":"10","ko":"수채 붓","en":"Watercolor Brush","cn":"水彩笔刷","aka":[],"c":"Painting & Illustration","ck":"회화·일러스트","u":["자연 다큐","여행","과학 해설"],"ue":["Nature documentary","Travel","Science explainers"],"film":"Follow the Rain","line":"Follow the rain from Australia's red desert heart to its green coast in one unbroken painted walk.","dur":114,"gen":false,"img":"thumbs/watercolor.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/watercolor/"},{"s":"impasto","n":"11","ko":"임파스토 유화","en":"Impasto Oil Painting","cn":"油画厚涂","aka":[],"c":"Painting & Illustration","ck":"회화·일러스트","u":["뮤직비디오","예술·문화","감성 광고"],"ue":["Music videos","Art & culture","Emotional ads"],"film":"The Colour of Rain","line":"In a grey, rainy square one red umbrella opens, and a waltz paints the whole plaza in colour.","dur":40,"gen":false,"img":"thumbs/impasto.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/impasto/"},{"s":"urban-sketch","n":"12","ko":"어반 스케치 · 펜 담채","en":"Urban Sketch · Pen & Wash","cn":"钢笔淡彩","aka":[],"c":"Painting & Illustration","ck":"회화·일러스트","u":["도시·여행","건축","라이프스타일 브랜드"],"ue":["City & travel","Architecture","Lifestyle brands"],"film":"Where the Wind Went","line":"A park that is only a pen sketch; wherever the wind carries her straw hat, colour follows.","dur":33,"gen":false,"img":"thumbs/urban-sketch.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/urban-sketch/"},{"s":"colored-pencil","n":"13","ko":"색연필 과학 일러스트","en":"Colored-Pencil Science Illustration","cn":"彩铅科普插画","aka":[],"c":"Painting & Illustration","ck":"회화·일러스트","u":["자연과학 단면도","그림책식 해설","숨은 구조와 과정"],"ue":["Natural-science cutaways","Picture-book explainers","Hidden structures and processes"],"film":"The Other Half","line":"Do trees feed each other? A pencil drawing sinks below the grass, follows one grain of sugar along a fungal thread to the next tree, and pulls back over a whole wood joined underground.","dur":51,"gen":false,"img":"thumbs/colored-pencil.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/colored-pencil/"},{"s":"one-line","n":"14","ko":"한 줄 드로잉","en":"One-line Drawing","cn":"一笔画","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["브랜드 스토리","인생의 이정표","미니멀 광고"],"ue":["Brand stories","Life milestones","Minimal ads"],"film":"The Line That Never Lifted","line":"One unbroken line draws a whole life, then the pen passes to a child.","dur":48,"gen":false,"img":"thumbs/one-line.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/one-line/"},{"s":"whiteboard","n":"15","ko":"화이트보드 해설","en":"Whiteboard Explainer","cn":"白板讲解","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["해설 영상","온라인 강의","과학"],"ue":["Explainers","Online courses","Science"],"film":"Einstein in Your Pocket","line":"How your phone knows where you are: GPS, atomic clocks, and the 38 microseconds relativity adds every day.","dur":111,"gen":false,"img":"thumbs/whiteboard.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/whiteboard/"},{"s":"chalkboard","n":"16","ko":"칠판 분필","en":"Chalkboard","cn":"黑板粉笔","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["어원 이야기","오해 바로잡기","수업"],"ue":["Word origins","Myth-busting","Lessons"],"film":"The Story of Chinese Characters","line":"Chalk writes a popular claim about two characters, wipes it, and traces 射 back three thousand years.","dur":49,"gen":false,"img":"thumbs/chalkboard.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/chalkboard/"},{"s":"sketchnote","n":"17","ko":"스케치노트","en":"Sketchnote","cn":"视觉笔记","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["강의 노트","과학 해설","한 장 요약"],"ue":["Lecture notes","Science explainers","One-page summaries"],"film":"How Bees Make Honey","line":"One bee makes 1/12 of a teaspoon of honey in her life; the pen follows one yellow drop from flower to jar until the whole page is a poster.","dur":51,"gen":false,"img":"thumbs/sketchnote.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/sketchnote/"},{"s":"stick-explainer","n":"18","ko":"막대 인간 해설","en":"Stick-figure Explainer","cn":"火柴人讲解","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["과학 해설","네트워크·사회 개념","데이터 비교"],"ue":["Science explainers","Networks & social ideas","Data comparisons"],"film":"Six Hands Away","line":"A chain of hands from you to a stranger: tested with letters in 1967, explained by rings that outgrow the Earth, closed around the globe.","dur":52,"gen":false,"img":"thumbs/stick-explainer.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/stick-explainer/"},{"s":"ipad-sketch","n":"19","ko":"태블릿 스케치 해설","en":"Tablet Sketch Explainer","cn":"平板速写讲解","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["음식·음료 해설","공예·하우투","생활 과학"],"ue":["Food & drink explainers","Craft and how-to","Lifestyle science"],"film":"From Cherry to Cup","line":"The coffee in your cup turns into a red cherry, then walks back to the cup: ripening, drying, roasting and grinding, one colour change at a time on a single pencil page.","dur":51,"gen":false,"img":"thumbs/ipad-sketch.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/ipad-sketch/"},{"s":"marker-paper","n":"20","ko":"마커 종이 스케치","en":"Marker on Paper","cn":"马克笔白纸速写","aka":[],"c":"Sketch & Board","ck":"스케치·판서","u":["문제 풀이","과학 해설","수업"],"ue":["Worked problems","Science explainers","Lessons"],"film":"How Far Can You See?","line":"A felt-tip marker works out how far the horizon is from a beach, then shows that climbing a hundred times higher only lets you see ten times farther.","dur":52,"gen":false,"img":"thumbs/marker-paper.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/marker-paper/"},{"s":"ink-wash","n":"21","ko":"수묵화","en":"Chinese Ink Wash","cn":"中国水墨","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["무협","문화 브랜드","시"],"ue":["Wuxia","Cultural brands","Poetry"],"film":"The Swordsman and the River","line":"A swordsman crosses the river on the water and splits the current with a single stroke.","dur":48,"gen":false,"img":"thumbs/ink-wash.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/ink-wash/"},{"s":"shadow-puppet","n":"22","ko":"그림자 인형극","en":"Shadow Puppetry","cn":"皮影戏","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["신화·민담","전통 유산","축제"],"ue":["Myths & folklore","Heritage","Festivals"],"film":"Hou Yi Shoots the Suns","line":"Ten suns scorch the earth until the archer Hou Yi draws his bow, told with leather puppets on a lit screen.","dur":54,"gen":false,"img":"thumbs/shadow-puppet.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/shadow-puppet/"},{"s":"ukiyoe","n":"23","ko":"우키요에","en":"Ukiyo-e","cn":"浮世绘","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["여행","일본 문화","시"],"ue":["Travel","Japanese culture","Poetry"],"film":"Toward the Mountain","line":"A traveller walks toward a distant mountain; every shot is a woodblock print, a great wave at the climax, the mountain and the whole scroll at the end.","dur":44,"gen":false,"img":"thumbs/ukiyoe.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/ukiyoe/"},{"s":"papercut-red","n":"24","ko":"붉은 전지 공예","en":"Red Paper-cut","cn":"红色窗花剪纸","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["설날","명절 인사","민담"],"ue":["Lunar New Year","Festive greetings","Folk tales"],"film":"Nian Comes to Town","line":"On New Year's Eve the beast Nian comes to town, and one girl's giant paper-cut lights up the village to scare it off.","dur":49,"gen":false,"img":"thumbs/papercut-red.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/papercut-red/"},{"s":"paper-lantern","n":"25","ko":"종이 오림 라이트박스","en":"Paper-cut Lightbox","cn":"纸雕灯影","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["여정·여행","작별·기념일","장소와 그 이야기"],"ue":["Journeys and travel","Farewells and anniversaries","Places and their stories"],"film":"The Last Night Train","line":"An old night train makes its last run, from a snowy mountain halt through a long tunnel to the sea, its lit windows going out one by one at the end of the line.","dur":51,"gen":false,"img":"thumbs/paper-lantern.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/paper-lantern/"},{"s":"stained-glass","n":"26","ko":"스테인드글라스","en":"Stained Glass","cn":"彩色玻璃窗","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["전설","전통 유산","명절 이야기"],"ue":["Legends","Heritage","Holiday stories"],"film":"The Dragon of the East Window","line":"Sunlight crosses a cathedral window from dawn to dusk, waking each pane of a knight-and-dragon tale.","dur":56,"gen":false,"img":"thumbs/stained-glass.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/stained-glass/"},{"s":"gilded-illumination","n":"27","ko":"금박 채색 필사본","en":"Gilded Illumination","cn":"金箔彩绘","aka":[],"c":"Traditional Crafts","ck":"전통 공예","u":["우화·그림책 이야기","명절·축제 숏폼","브랜드·기원 이야기"],"ue":["Fables and picture-book stories","Holiday and festival shorts","Brand and origin stories"],"film":"Borrowed Light","line":"In a painted world where only gold shines, the sun goes out; a girl carries the last lamp up the mountain and gives it its light back.","dur":47,"gen":false,"img":"thumbs/gilded-illumination.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/gilded-illumination/"},{"s":"risograph","n":"28","ko":"리소그래프 인쇄","en":"Risograph Print","cn":"孔版印刷","aka":["Risograph 孔版印刷"],"c":"Print & Printmaking","ck":"인쇄·판화","u":["인디 브랜드","진(zine)","라이프스타일"],"ue":["Indie brands","Zines","Lifestyle"],"film":"Sunday Ride","line":"A Sunday-morning bike ride through the city — bakery, park, riverside — each stop adding an ink until three misregistered plates overprint.","dur":40,"gen":false,"img":"thumbs/risograph.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/risograph/"},{"s":"halftone-dossier","n":"29","ko":"하프톤 사건 파일","en":"Halftone Dossier","cn":"网点档案","aka":["复古半调案卷"],"c":"Print & Printmaking","ck":"인쇄·판화","u":["유머","반려동물 콘텐츠","소셜 숏폼"],"ue":["Humour","Pet content","Social shorts"],"film":"Case File: Chubby","line":"A chubby orange cat stands trial for testing gravity and 4 a.m. parkour, and walks free.","dur":30,"gen":false,"img":"thumbs/halftone-dossier.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/halftone-dossier/"},{"s":"woodcut","n":"30","ko":"목판화","en":"Woodcut Print","cn":"木刻版画","aka":[],"c":"Print & Printmaking","ck":"인쇄·판화","u":["민담","공예 브랜드","북 트레일러"],"ue":["Folk tales","Craft brands","Book trailers"],"film":"The Bell Founder","line":"A village spends a whole winter casting one bell; the first time it rings, the snow stops.","dur":58,"gen":false,"img":"thumbs/woodcut.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/woodcut/"},{"s":"engraving","n":"31","ko":"동판화","en":"Copperplate Engraving","cn":"铜版画","aka":[],"c":"Print & Printmaking","ck":"인쇄·판화","u":["박물관 설명","과학 해설","브랜드 헤리티지"],"ue":["Museum labels","Science explainers","Brand heritage"],"film":"The Honeybee, Plate VII","line":"A natural-history plate engraves itself: the burin cuts the copper, the bee builds up line by line, and a watercolour wash brings it to life.","dur":40,"gen":false,"img":"thumbs/engraving.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/engraving/"},{"s":"silkscreen-poster","n":"32","ko":"실크스크린 여행 포스터","en":"Silkscreen Travel Poster","cn":"丝印旅行海报","aka":[],"c":"Print & Printmaking","ck":"인쇄·판화","u":["여행지 가이드","관광","행사 포스터"],"ue":["Destination guides","Tourism","Event posters"],"film":"The Long Way Home","line":"A traveller crosses the world one full-bleed screen print at a time, a ticket stub counting the distance from home, until the far side turns into the way back.","dur":50,"gen":false,"img":"thumbs/silkscreen-poster.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/silkscreen-poster/"},{"s":"printed-long-take","n":"33","ko":"스크래치보드 롱테이크","en":"Scratchboard Long Take","cn":"刮版画长镜头","aka":["Printed Long Take","印刷长镜头"],"c":"Print & Printmaking","ck":"인쇄·판화","u":["여정","야생동물","풍경"],"ue":["Journeys","Wildlife","Landscapes"],"film":"Thirty-Three Cranes","line":"Red-crowned cranes in a Hokkaido valley, one scratchboard take, counted back from 33 to 1,927.","dur":60,"gen":false,"img":"thumbs/printed-long-take.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/printed-long-take/"},{"s":"pop-art","n":"34","ko":"팝아트","en":"Pop Art","cn":"波普艺术","aka":[],"c":"Print & Printmaking","ck":"인쇄·판화","u":["일상 사물 해설","브랜드·제품 포스터","작은 데이터 이야기"],"ue":["Everyday-object explainers","Brand and product posters","Small data stories"],"film":"The Same Banana","line":"Almost every banana in the shops is one plant, copied: a wall of identical prints, an old banana eaten black by dots, and a wave of colour that turns into many bananas.","dur":52,"gen":false,"img":"thumbs/pop-art.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/pop-art/"},{"s":"vintage-collage","n":"35","ko":"빈티지 판화 콜라주","en":"Vintage Engraving Collage","cn":"复古版画拼贴","aka":[],"c":"Print & Printmaking","ck":"인쇄·판화","u":["사물의 역사","생각과 사회를 다룬 매거진식 해설","아카이브·수집 이야기"],"ue":["The history of an object","Magazine-style explainers on ideas and society","Archive and collecting stories"],"film":"The Inverted Jenny","line":"A 1918 airmail sheet printed with its plane upside down: bought for $24, cut up and scattered, and number 66 is still missing.","dur":52,"gen":false,"img":"thumbs/vintage-collage.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/vintage-collage/"},{"s":"swiss-motion","n":"36","ko":"스위스 모션 그래픽","en":"Swiss Motion Graphics","cn":"瑞士动态排版","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["브랜드 아이덴티티","행사","디자인 교육"],"ue":["Brand identity","Events","Design education"],"film":"Five Rules for a Poster","line":"A concert poster lays itself out by five Swiss design rules; the fifth is to break just one.","dur":44,"gen":false,"img":"thumbs/swiss-motion.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/swiss-motion/"},{"s":"spy-titles","n":"37","ko":"60년대 스파이 타이틀","en":"60s Spy Title Sequence","cn":"60s 间谍片头","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["타이틀 시퀀스","행사 오프닝","예고편"],"ue":["Title sequences","Event openers","Trailers"],"film":"The Velvet Cipher","line":"Opening titles for an imaginary 1964 spy film: a chase for a stolen key until the shapes lock into the title.","dur":44,"gen":false,"img":"thumbs/spy-titles.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/spy-titles/"},{"s":"art-deco","n":"38","ko":"아르데코","en":"Art Deco","cn":"装饰艺术","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["럭셔리·호텔","갈라 행사","초대장"],"ue":["Luxury & hospitality","Galas","Invitations"],"film":"Midnight at the Starlight Hotel","line":"A grand hotel, 1930: a bellboy races lifts and revolving doors to deliver one letter before midnight.","dur":58,"gen":false,"img":"thumbs/art-deco.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/art-deco/"},{"s":"pictogram-motion","n":"39","ko":"픽토그램 모션","en":"Pictogram Motion","cn":"象形运动图形","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["공공 서비스·도시 이야기","브랜드·행사 아이덴티티","기호와 사물로 푸는 해설"],"ue":["Public services and city stories","Brand and event identity films","Explainers told through signs and objects"],"film":"Left Behind","line":"A yellow umbrella left on a bus waits out a sunny day on the lost-property shelf, then opens with 312 others when the storm comes back: objects, vehicles, weather and signs as beat-locked geometric pictograms.","dur":50,"gen":false,"img":"thumbs/pictogram-motion.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/pictogram-motion/"},{"s":"bauhaus-shapes","n":"40","ko":"바우하우스 도형","en":"Bauhaus Shapes","cn":"包豪斯几何","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["금융·경제 해설","메커니즘·원리","타이틀·챕터 카드"],"ue":["Finance and economics explainers","Mechanisms and principles","Titles and chapter cards"],"film":"COMPOUND","line":"One dot doubles every ten years: 128 after seventy, 6.02 without compounding, and the last ten years are worth all the rest.","dur":52,"gen":false,"img":"thumbs/bauhaus-shapes.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/bauhaus-shapes/"},{"s":"flat-space-explainer","n":"41","ko":"스케일 줌 해설","en":"Scale Zoom Explainer","cn":"扁平尺度漫游","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["과학 해설","크기와 규모","교실 수업"],"ue":["Science explainers","Scale and size","Classroom"],"film":"The Long Way Down","line":"A little probe whose eye is a zoom lens fires a dotted sight line at each next stop and takes us from the Milky Way down to a virus.","dur":52,"gen":false,"img":"thumbs/flat-space-explainer.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/flat-space-explainer/"},{"s":"text-flash-cuts","n":"42","ko":"텍스트 플래시 컷","en":"Text Flash Cuts","cn":"文字闪切","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["서스펜스·드라마 예고편","타이틀 시퀀스","선언문 영상"],"ue":["Suspense & drama trailers","Title sequences","Manifesto films"],"film":"Behind You","line":"A letter, a phone call, a wall of windows, thirteen steps: the girl who told him not to look back is always one step closer, until she turns her head.","dur":46,"gen":true,"img":"thumbs/text-flash-cuts.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/text-flash-cuts/"},{"s":"silhouette-rhythm","n":"43","ko":"실루엣 리듬","en":"Silhouette Rhythm","cn":"剪影律动","aka":[],"c":"Graphic & Type","ck":"그래픽·타이포","u":["뮤직비디오","스포츠·팀 영상","자연·축제 오프닝"],"ue":["Music videos","Sports and team films","Nature and festival openers"],"film":"Half a Beat","line":"A flock of flamingos moves on every beat, and one young bird is always half a beat late; the ripples the others left on the water teach it the beat.","dur":49,"gen":false,"img":"thumbs/silhouette-rhythm.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/silhouette-rhythm/"},{"s":"blueprint","n":"44","ko":"청사진","en":"Blueprint","cn":"工程蓝图","aka":["蓝图 / 工程制图"],"c":"Line Diagrams","ck":"선 도해","u":["엔지니어링","하드웨어 출시","기술 해설"],"ue":["Engineering","Hardware launches","Tech explainers"],"film":"Patent Pending: The Cloud Catcher","line":"An inventor's blueprint draws, explodes and assembles a cloud-catching machine, and its revision cloud starts to rain.","dur":47,"gen":false,"img":"thumbs/blueprint.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/blueprint/"},{"s":"iso-infographic","n":"45","ko":"아이소메트릭 인포그래픽","en":"Isometric Infographic","cn":"等距信息图","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["공정 해설","공급망","연차 보고서"],"ue":["Process explainers","Supply chains","Annual reports"],"film":"From Bean to Cup","line":"A coffee's journey from the plantation to your hands, across one isometric world.","dur":59,"gen":false,"img":"thumbs/iso-infographic.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/iso-infographic/"},{"s":"teardown","n":"46","ko":"분해도 티어다운","en":"Exploded Teardown","cn":"产品拆解","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["하드웨어 출시","제품 페이지","사양 해설"],"ue":["Hardware launches","Product pages","Spec explainers"],"film":"21 Keys, Opened","line":"Half an open-source keyboard comes apart in one orbit, down to the chip, then closes with its real dimensions.","dur":39,"gen":false,"img":"thumbs/teardown.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/teardown/"},{"s":"hardcore-info","n":"47","ko":"선화 단면 도해","en":"Line-Art Cutaway","cn":"线稿剖面图解","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["하드웨어 해설","제품 엔지니어링","과학 교육"],"ue":["Hardware explainers","Product engineering","Science education"],"film":"Where Is Your Phone's Antenna?","line":"A phone loses signal when held by the corner; taken apart, its metal frame turns out to be the antenna, cut into pieces your hand can bridge.","dur":52,"gen":false,"img":"thumbs/hardcore-info.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/hardcore-info/"},{"s":"precise-mechanism","n":"48","ko":"색 구분 기계 도해","en":"Color-Coded Mechanism","cn":"分色机械图解","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["기계 작동 원리","제품·공학 해설","과학 교육"],"ue":["How machines work","Product and engineering explainers","Science teaching"],"film":"Three Systems Keep the Time","line":"A watch with no battery is cut open: its three systems are dyed one by one, the train races when the escapement is pulled out, and one slowed tick lets it all out again.","dur":52,"gen":false,"img":"thumbs/precise-mechanism.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/precise-mechanism/"},{"s":"instruction-manual","n":"49","ko":"사용 설명서 일러스트","en":"Instruction Manual Art","cn":"说明书插画","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["조립·설치 안내","안전 수칙","제품 온보딩"],"ue":["Assembly and set-up guides","Safety instructions","Product onboarding"],"film":"Step Ten","line":"Two first-timers build a crib from a flat-pack manual, ten steps on one 45° page; step ten was never in the manual.","dur":51,"gen":false,"img":"thumbs/instruction-manual.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/instruction-manual/"},{"s":"pen-plotter","n":"50","ko":"펜 플로터","en":"Pen Plotter","cn":"笔式绘图仪","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["지도·지형","측정·기록","제너러티브·데이터 드로잉"],"ue":["Maps and terrain","Measurements and records","Generative and data drawings"],"film":"8848.86","line":"At night under a desk lamp, a pen plotter draws Mount Qomolangma from real elevation data with four pens, and writes its height last.","dur":50,"gen":false,"img":"thumbs/pen-plotter.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/pen-plotter/"},{"s":"assembly-line-diagram","n":"51","ko":"공정 라인 도해","en":"Assembly-Line Diagram","cn":"流水线图解","aka":[],"c":"Line Diagrams","ck":"선 도해","u":["공정 원리 설명","생물·의학","공급망·파이프라인"],"ue":["How a process works","Biology and medicine","Supply chains and pipelines"],"film":"The Disassembly Line","line":"A body cut open as a factory that runs backwards: a 12:30 sandwich is taken apart station by station, and six hours later it runs for the bus.","dur":55,"gen":false,"img":"thumbs/assembly-line-diagram.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/assembly-line-diagram/"},{"s":"rubber-hose","n":"52","ko":"1930년대 러버호스 카툰","en":"1930s Rubber Hose Cartoon","cn":"1930s 橡皮管卡通","aka":[],"c":"Cartoons","ck":"카툰","u":["음식·음료","레트로 광고","어린이"],"ue":["Food & drink","Retro ads","Kids"],"film":"Coffee Cup Chase","line":"A coffee cup chases a runaway sugar cube around the kitchen, 1930s-cartoon style.","dur":50,"gen":false,"img":"thumbs/rubber-hose.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/rubber-hose/"},{"s":"cel-anime-80s","n":"53","ko":"80년대 셀 애니메이션","en":"80s Cel Anime","cn":"80 年代赛璐璐动画","aka":[],"c":"Cartoons","ck":"카툰","u":["뮤직비디오","게임 트레일러","레트로 감성"],"ue":["Music videos","Game trailers","Nostalgia"],"film":"City Lights, 1987","line":"A courier girl rides through a rain-soaked neon city to deliver a tape before the dawn launch.","dur":59,"gen":false,"img":"thumbs/cel-anime-80s.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/cel-anime-80s/"},{"s":"scifi-toon","n":"54","ko":"SF 시트콤 카툰","en":"Sci-Fi Sitcom Toon","cn":"科幻情景喜剧卡通","aka":[],"c":"Cartoons","ck":"카툰","u":["코미디","테크 브랜드","소셜 숏폼"],"ue":["Comedy","Tech brands","Social shorts"],"film":"Coffee Run","line":"A jaded genius opens a portal just to buy coffee and tumbles through ever-stranger universes.","dur":58,"gen":false,"img":"thumbs/scifi-toon.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/scifi-toon/"},{"s":"midcentury-toon","n":"55","ko":"미드센추리 카툰","en":"Mid-century Cartoon","cn":"50s 扁平卡通","aka":[],"c":"Cartoons","ck":"카툰","u":["설치 안내","고객 센터","하우투"],"ue":["Set-up guides","Help centres","How-to"],"film":"Meet Pip","line":"A robot vacuum set up in three steps, told like a 1950s classroom film.","dur":40,"gen":false,"img":"thumbs/midcentury-toon.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/midcentury-toon/"},{"s":"comic-history","n":"56","ko":"코믹 역사 카툰","en":"Comic History Cartoon","cn":"搞笑历史卡通","aka":[],"c":"Cartoons","ck":"카툰","u":["역사 속 영토 변화","가벼운 지정학 해설","시장 점유율·영역 다툼"],"ue":["Territorial changes in history","Light explainers on geopolitics","Market share and turf-war stories"],"film":"One Piece of Paper","line":"Alsace-Lorraine changed hands four times between 1871 and 1945: each time someone tore off the paper and pasted a new piece, and the woman living on it never moved.","dur":51,"gen":true,"img":"thumbs/comic-history.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/comic-history/"},{"s":"manga-panels","n":"57","ko":"흑백 만화 칸","en":"Manga Panels","cn":"黑白漫画分格","aka":[],"c":"Cartoons","ck":"카툰","u":["뮤직비디오","제품 출시","애니 오프닝"],"ue":["Music videos","Product launches","Anime openings"],"film":"KOMA ONE: Thirty Frames a Second","line":"A street photographer chases a running light to the moment the pigeons rise; her pocket camera splits that second into thirty panels.","dur":48,"gen":true,"img":"thumbs/manga-panels.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/manga-panels/"},{"s":"pixel-rpg","n":"58","ko":"16비트 픽셀 RPG","en":"16-bit Pixel RPG","cn":"16-bit 像素 RPG","aka":[],"c":"Games","ck":"게임","u":["게임 트레일러","요약 영상","레트로 감성"],"ue":["Game trailers","Recaps","Nostalgia"],"film":"The Last Save Point","line":"At the final boss door a hero saves the game, and the save screen replays the whole journey.","dur":54,"gen":false,"img":"thumbs/pixel-rpg.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/pixel-rpg/"},{"s":"hd-2d","n":"59","ko":"2.5D 픽셀 아트","en":"2.5D Pixel Art","cn":"2.5D 像素","aka":["HD-2D"],"c":"Games","ck":"게임","u":["게임 트레일러","판타지","스토리 영상"],"ue":["Game trailers","Fantasy","Story films"],"film":"The Lampbearer","line":"The lighthouse goes dark; a girl carries the last flame through a night forest and up the storm cliffs.","dur":76,"gen":false,"img":"thumbs/hd-2d.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/hd-2d/"},{"s":"microgame","n":"60","ko":"마이크로게임 연속 플레이","en":"Microgame Frenzy","cn":"微游戏快闪","aka":[],"c":"Games","ck":"게임","u":["게임 트레일러","온보딩","소셜 숏폼"],"ue":["Game trailers","Onboarding","Social shorts"],"film":"Five-Second Astronaut","line":"A clumsy cadet survives a five-second boot camp, faster and faster, until the boss: landing home.","dur":60,"gen":false,"img":"thumbs/microgame.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/microgame/"},{"s":"game-show","n":"61","ko":"리듬 게임쇼","en":"Rhythm Game Show","cn":"节奏综艺","aka":["Game Show Flat","综艺节奏扁平"],"c":"Games","ck":"게임","u":["기술 연대기","연말 결산","예능"],"ue":["Tech timelines","Year in review","Variety shows"],"film":"Rhythm of AI, 1997 → 2026","line":"The history of AI as a rhythm game: models take the stage on the beat, and a report card closes the show.","dur":149,"gen":false,"img":"thumbs/game-show.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/game-show/"},{"s":"ascii-crt","n":"62","ko":"CRT 아스키 터미널","en":"CRT ASCII Terminal","cn":"CRT 字符终端","aka":["ASCII / CRT Terminal","ASCII / CRT 终端"],"c":"Film & Tape","ck":"필름·테이프","u":["개발자 도구","SF","테크 브랜드"],"ue":["Developer tools","Sci-fi","Tech brands"],"film":"Tranquility.log","line":"A moon-base AI wakes after forty years to a signal from Earth, and replies by drawing “home” in characters.","dur":60,"gen":false,"img":"thumbs/ascii-crt.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/ascii-crt/"},{"s":"silent-film","n":"63","ko":"1920년대 무성영화","en":"1920s Silent Film","cn":"1920s 默片","aka":[],"c":"Film & Tape","ck":"필름·테이프","u":["코미디","레트로 브랜드","무성 스토리텔링"],"ue":["Comedy","Retro brands","Silent storytelling"],"film":"The Runaway Loaf","line":"A baker's boy chases a runaway loaf downhill, then breaks it in half for a hungry girl.","dur":54,"gen":false,"img":"thumbs/silent-film.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/silent-film/"},{"s":"backrooms","n":"64","ko":"리미널 파운드 푸티지","en":"Liminal Found Footage","cn":"后室录像带","aka":["后室 / 新怪谈"],"c":"Film & Tape","ck":"필름·테이프","u":["호러","미스터리·ARG","게임 티저"],"ue":["Horror","Mystery & ARG","Game teasers"],"film":"Night Shift Orientation","line":"A new night-shift hire films their first night in an endless yellow office, following the rules on the wall.","dur":60,"gen":false,"img":"thumbs/backrooms.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/backrooms/"},{"s":"scratch-film","n":"65","ko":"스크래치 필름","en":"Scratch Film","cn":"胶片直刻","aka":[],"c":"Film & Tape","ck":"필름·테이프","u":["어둠 속에서 벌어지는 일","하나의 흔적에서 시스템 전체로","빛과 그림자로 그린 작은 모험"],"ue":["Things that happen in the dark","One mark to a whole system","Small adventures told in light and shadow"],"film":"The Night Climb","line":"A finger-long lanternfish climbs half a kilometre in the dark, hides its shadow with its own lights, and turns out to be one of countless animals rising every night.","dur":52,"gen":false,"img":"thumbs/scratch-film.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/scratch-film/"},{"s":"double-exposure","n":"66","ko":"이중 노출","en":"Double Exposure","cn":"双重曝光","aka":[],"c":"Film & Tape","ck":"필름·테이프","u":["브랜드·도시 영상","다큐·시리즈 오프닝","뮤직비디오 인트로"],"ue":["Brand and city films","Documentary and series openings","Music video intros"],"film":"Mountains and Seas","line":"From the mountains to the sea as night falls: a stag, a wolf, an eagle, a salmon and a whale, each carrying its own place inside its silhouette, until the whale's harbour lands on the real shore.","dur":50,"gen":false,"img":"thumbs/double-exposure.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/double-exposure/"},{"s":"dark-keynote","n":"67","ko":"다크 테크 키노트","en":"Dark Tech Keynote","cn":"暗色科技发布","aka":[],"c":"Screens & Interfaces","ck":"화면·인터페이스","u":["제품 출시","SaaS","키노트"],"ue":["Product launches","SaaS","Keynotes"],"film":"Room to Think","line":"Launch film for Tidy, a fictional app: one buried cursor snaps hundreds of windows back into place.","dur":42,"gen":false,"img":"thumbs/dark-keynote.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/dark-keynote/"},{"s":"living-screencast","n":"68","ko":"마스코트 스크린캐스트","en":"Mascot Screencast","cn":"像素小人录屏","aka":["Living Screencast","活体实机录屏"],"c":"Screens & Interfaces","ck":"화면·인터페이스","u":["제품 튜토리얼","기능 출시","온보딩"],"ue":["Product tutorials","Feature launches","Onboarding"],"film":"Clawd Moves In","line":"Clawd hops out of the terminal into the Claude app and acts out plan mode and self-checks in one take.","dur":59,"gen":false,"img":"thumbs/living-screencast.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/living-screencast/"},{"s":"hologram-hud","n":"69","ko":"SF 홀로그램 HUD","en":"Sci-fi Hologram HUD","cn":"科幻全息界面","aka":[],"c":"Screens & Interfaces","ck":"화면·인터페이스","u":["사양 소개","출시 영상","전시회"],"ue":["Spec walkthroughs","Launch videos","Trade shows"],"film":"Volt · Spec Scan","line":"An e-bike is scanned into a hologram; target boxes lock onto the battery, motor and brakes.","dur":39,"gen":false,"img":"thumbs/hologram-hud.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/hologram-hud/"},{"s":"desktop-flythrough","n":"70","ko":"테이블 위 앱 플라이스루","en":"Tabletop App Flythrough","cn":"桌面卡片穿梭","aka":["Desktop Flythrough","桌面穿梭"],"c":"Screens & Interfaces","ck":"화면·인터페이스","u":["앱 소개","업무 흐름","제품"],"ue":["App explainers","Workflows","Products"],"film":"Before the Ding","line":"A cat photo hops across app cards on a sunlit desk, from one phone to a friend's.","dur":60,"gen":false,"img":"thumbs/desktop-flythrough.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/desktop-flythrough/"},{"s":"spreadsheet","n":"71","ko":"스프레드시트 필름","en":"Spreadsheet Film","cn":"表格动画","aka":[],"c":"Screens & Interfaces","ck":"화면·인터페이스","u":["데이터 리터러시","재무·비용","분석 해설"],"ue":["Data literacy","Finance & costs","Analytics explainers"],"film":"The Hidden Column","line":"The total says treatment B; unhide the stone-size columns and A wins every group. Simpson's paradox told in one sheet, 1 cell = 1 patient.","dur":52,"gen":false,"img":"thumbs/spreadsheet.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/spreadsheet/"},{"s":"one-bit-dither","n":"72","ko":"1비트 디더","en":"1-bit Dither","cn":"1-bit 点阵","aka":[],"c":"Screens & Interfaces","ck":"화면·인터페이스","u":["매체로 보는 역사","인쇄·스캔·신호","밤 풍경과 우주"],"ue":["History told through a chain of media","Printing, scanning and signals","Night scenes and space"],"film":"The Moon's Fax","line":"February 1966: the first close-up of the Moon arrives at an English radio telescope as a newspaper fax, printed one line at a time in two inks, a day early and stretched too tall.","dur":50,"gen":false,"img":"thumbs/one-bit-dither.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/one-bit-dither/"},{"s":"circuit-board","n":"73","ko":"회로 기판","en":"Circuit Board","cn":"电路板","aka":[],"c":"Light & Lines","ck":"빛·선","u":["에너지","공급망","전자 기기"],"ue":["Energy","Supply chains","Devices"],"film":"Seven Milliseconds","line":"Rivers become copper traces as current runs 2,080 km from a dam to a phone charger.","dur":60,"gen":false,"img":"thumbs/circuit-board.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/circuit-board/"},{"s":"firefly-pointillism","n":"74","ko":"반딧불 점묘","en":"Firefly Pointillism","cn":"萤火光点","aka":[],"c":"Light & Lines","ck":"빛·선","u":["그림책 이야기","여럿이 하나 되는 이야기","밤과 자연의 서정"],"ue":["Picture-book stories","Many becoming one","Night and nature lyric"],"film":"Shine Back","line":"A firefly's blink is a question: a girl gets her answer as a deer, loses every light in a storm, and asks the whole dark with the last one.","dur":51,"gen":false,"img":"thumbs/firefly-pointillism.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/firefly-pointillism/"},{"s":"flow-field","n":"75","ko":"흐름장 바람선","en":"Flow-field Wind Lines","cn":"流场风线","aka":[],"c":"Light & Lines","ck":"빛·선","u":["폭풍·장마 같은 날씨","해류·홍수","기준선을 넘는 흐름"],"ue":["Storms, monsoons and other weather","Ocean currents and river floods","Any flow measured against a threshold"],"film":"Typhoon Yagi over Qiongzhou","line":"Thousands of ink wind lines, computed from the best track, draw Super Typhoon Yagi: the eye opening over the South China Sea, the landfall on Hainan, the spiral coming apart in Vietnam, and a whole week folded into one last line.","dur":52,"gen":false,"img":"thumbs/flow-field.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/flow-field/"},{"s":"oscilloscope-math","n":"76","ko":"오실로스코프 수학","en":"Oscilloscope Math","cn":"示波器数学","aka":[],"c":"Light & Lines","ck":"빛·선","u":["수학·물리 수업","신호·전자","과학 해설"],"ue":["Maths and physics lessons","Signals and electronics","Science explainers"],"film":"The Gibbs Phenomenon","line":"How do you roll a square out of circles? Spinning circles stack into a square wave, until a dive into one corner finds the 9% spike that never goes away.","dur":51,"gen":false,"img":"thumbs/oscilloscope-math.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/oscilloscope-math/"},{"s":"neon-tubes","n":"77","ko":"네온 튜브","en":"Neon Tubes","cn":"霓虹灯管","aka":[],"c":"Light & Lines","ck":"빛·선","u":["매장 오픈·마스코트 이야기","나이트라이프·시티팝 뮤직비디오","도시·축제 야간 아이덴트"],"ue":["Shop openings and mascot stories","Nightlife and city-pop music videos","City and festival night idents"],"film":"Midnight Snack","line":"A neon cat goes out for the goldfish on the sign at the end of the street, cracks its bowl, and runs the fading fish home through the rain to the goblet on its own sign.","dur":48,"gen":false,"img":"thumbs/neon-tubes.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/neon-tubes/"},{"s":"brick-toy","n":"78","ko":"블록 장난감","en":"Brick Toy","cn":"积木玩具","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["장난감·어린이","제품 조립","우주"],"ue":["Toys & kids","Product builds","Space"],"film":"Rocket from Spare Parts","line":"A brick astronaut builds a rocket from spare parts and flies to a brick moon.","dur":54,"gen":false,"img":"thumbs/brick-toy.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/brick-toy/"},{"s":"paper-popup","n":"79","ko":"종이 팝업북","en":"Paper Pop-up Book","cn":"纸片立体书","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["어린이 책","게임 트레일러","스토리 영상"],"ue":["Children's books","Game trailers","Story films"],"film":"Pip's Paper Adventure","line":"A pop-up book opens on a desk; a sprite named Pip adventures through paper worlds and jumps out into ours.","dur":133,"gen":false,"img":"thumbs/paper-popup.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/paper-popup/"},{"s":"tilt-shift","n":"80","ko":"틸트시프트 미니어처","en":"Tilt-Shift Miniature","cn":"移轴微缩","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["도시 홍보","부동산","교통"],"ue":["City promos","Real estate","Transport"],"film":"Toy Town Rush Hour","line":"Morning rush hour in a town that looks like a model: traffic, trains and tiny people.","dur":38,"gen":false,"img":"thumbs/tilt-shift.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/tilt-shift/"},{"s":"lowpoly-island","n":"81","ko":"로우폴리 아이소메트릭 섬","en":"Low-poly Isometric Island","cn":"低多边形等距","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["게임 트레일러","세계관 구축","잔잔한 콘텐츠"],"ue":["Game trailers","World building","Calm content"],"film":"The Island That Grew","line":"An island and its village grow tile by tile from an empty sea, each tile a note, into a starry night.","dur":53,"gen":false,"img":"thumbs/lowpoly-island.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/lowpoly-island/"},{"s":"glass-product","n":"82","ko":"유리 질감 제품 렌더","en":"Glass Product Render","cn":"玻璃质感产品","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["제품 출시","소비자 기술","뷰티"],"ue":["Product launches","Consumer tech","Beauty"],"film":"Aura — Hear the Light","line":"Unboxing and close-ups of Aura, fictional glass earbuds, in strip-light sweeps and caustics.","dur":32,"gen":false,"img":"thumbs/glass-product.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/glass-product/"},{"s":"memphis-diorama","n":"83","ko":"멤피스 디오라마","en":"Memphis Diorama","cn":"孟菲斯微缩景观","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["웹 메인 화면","앰비언트 루프","계절"],"ue":["Web heroes","Ambient loops","Seasons"],"film":"Four Seasons in Pomelo Town","line":"One river bend, four seasons, one take; each turns when the big tree squats and springs back.","dur":45,"gen":false,"img":"thumbs/memphis-diorama.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/memphis-diorama/"},{"s":"isometric-picture-book","n":"84","ko":"아이소메트릭 사람 풍경","en":"Isometric People Scene","cn":"等距小人场景","aka":["Isometric Picture Book","等距绘本"],"c":"3D & Miniature","ck":"3D·미니어처","u":["생활 규칙","줄서기","비교"],"ue":["Everyday rules","Queues","Comparisons"],"film":"Seventy-Two Seats","line":"Travellers board an isometric plane, and the order shows why one way is nearly twice as fast.","dur":60,"gen":false,"img":"thumbs/isometric-picture-book.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/isometric-picture-book/"},{"s":"crayon-world","n":"85","ko":"크레용 3D 월드","en":"Crayon World 3D","cn":"蜡笔立体世界","aka":[],"c":"3D & Miniature","ck":"3D·미니어처","u":["짧은 이야기","헌정 영상","여정"],"ue":["Short stories","Tributes","Journeys"],"film":"The Butterfly","line":"A first-person flight over a crayon village to one flower in an old man's garden; then his eyes, and what he says.","dur":64,"gen":false,"img":"thumbs/crayon-world.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/crayon-world/"},{"s":"satellite-briefing","n":"86","ko":"위성 브리핑","en":"Satellite Briefing","cn":"卫星简报","aka":[],"c":"Instruments & Evidence","ck":"계측·증거","u":["기후","뉴스 해설","지리"],"ue":["Climate","News explainers","Geography"],"film":"The Map Still Says Sea","line":"A satellite follows the map to the Aral Sea and finds a desert; only the part someone dammed came back.","dur":38,"gen":false,"img":"thumbs/satellite-briefing.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/satellite-briefing/"},{"s":"briefing-board","n":"87","ko":"엔지니어링 브리핑 보드","en":"Engineering Briefing Board","cn":"工程简报板","aka":[],"c":"Instruments & Evidence","ck":"계측·증거","u":["엔지니어링","옵션 비교","브리핑"],"ue":["Engineering","Option comparisons","Briefings"],"film":"The Ship Decides","line":"Four bridge types are tested on one briefing wall, and the ship that must pass under picks the winner.","dur":40,"gen":false,"img":"thumbs/briefing-board.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/briefing-board/"},{"s":"lidar-survey","n":"88","ko":"라이다 측량","en":"LiDAR Survey","cn":"点云测绘","aka":[],"c":"Instruments & Evidence","ck":"계측·증거","u":["문화유산","환경","현장 조사"],"ue":["Heritage","Environment","Site surveys"],"film":"The Fields Under the Forest","line":"A laser survey strips the canopy off a Connecticut forest and finds 3.4 km of old farm walls.","dur":40,"gen":false,"img":"thumbs/lidar-survey.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/lidar-survey/"},{"s":"microscope","n":"89","ko":"현미경 아래","en":"Under the Microscope","cn":"显微镜下","aka":["Microscope Story","显微叙事"],"c":"Instruments & Evidence","ck":"계측·증거","u":["바이오·의학","재료과학","스킨케어 과학"],"ue":["Biomedicine","Materials science","Skincare science"],"film":"Measured Blue","line":"One continuous move from a liver slide to a single nucleus; two circles, counted pixel by pixel, differ 2.4 times in blue.","dur":40,"gen":false,"img":"thumbs/microscope.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/microscope/"},{"s":"archive-lighttable","n":"90","ko":"아카이브 라이트 테이블","en":"Archive Light Table","cn":"档案看片台","aka":["档案灯台"],"c":"Instruments & Evidence","ck":"계측·증거","u":["브랜드 역사","아카이브 이야기","박물관"],"ue":["Brand history","Archive stories","Museums"],"film":"Two Seconds Short","line":"The telegram said 57 seconds; under a loupe, the Wrights' glass negatives and the archive say 59.","dur":40,"gen":false,"img":"thumbs/archive-lighttable.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/archive-lighttable/"},{"s":"security-xray","n":"91","ko":"보안 검색 엑스레이","en":"Security X-ray","cn":"安检 X 光","aka":[],"c":"Instruments & Evidence","ck":"계측·증거","u":["공항·세관 검색","소포·화물 검사","제품 내부 구조"],"ue":["Airport and customs screening","Parcel and cargo inspection","Product internals"],"film":"Night Shift at Lane 3","line":"One night at an airport screening console: a power bank, a bottle of water, and six live crabs that move in the CT.","dur":52,"gen":false,"img":"thumbs/security-xray.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/security-xray/"},{"s":"dark-documentary","n":"92","ko":"레이더 스캔 다큐멘터리","en":"Radar Sweep Documentary","cn":"雷达扫描纪录片","aka":[],"c":"Instruments & Evidence","ck":"계측·증거","u":["과학·공학의 역사","고고학·유적 복원","천문·심우주 탐사"],"ue":["History of science and engineering","Archaeology, sites and reconstructions","Astronomy, deep space and survey"],"film":"Catching the Moon","line":"A storm at Parkes, 21 July 1969: a 64-metre dish tipped to its limit holds on and catches the moonwalk for the world.","dur":52,"gen":false,"img":"thumbs/dark-documentary.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/dark-documentary/"},{"s":"thermal-camera","n":"93","ko":"열화상 카메라","en":"Thermal Camera","cn":"热成像","aka":[],"c":"Instruments & Evidence","ck":"계측·증거","u":["건물·에너지 점검","야간 야생동물","기계·전기 설비"],"ue":["Building and energy inspection","Wildlife at night","Machines and electrics"],"film":"A Building on a Winter Night","line":"A thermal camera circles an old apartment block on a snowy night: a leaking window, pipes inside the walls, a cat asleep on a warm bonnet, and the same block a year after its retrofit.","dur":49,"gen":false,"img":"thumbs/thermal-camera.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/thermal-camera/"},{"s":"dataviz","n":"94","ko":"데이터 스토리텔링","en":"Data Storytelling","cn":"数据叙事","aka":[],"c":"Data & Maps","ck":"데이터·지도","u":["데이터 저널리즘","보고서","기후·과학"],"ue":["Data journalism","Reports","Climate & science"],"film":"A Hundred Summers","line":"A hundred years of summer temperatures, where the chart itself tells the story.","dur":50,"gen":false,"img":"thumbs/dataviz.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/dataviz/"},{"s":"white-model","n":"95","ko":"화이트 모델 프로젝션","en":"Projection-Mapped Model","cn":"白模投影","aka":["Projection on White Model"],"c":"Data & Maps","ck":"데이터·지도","u":["도시계획","전시","도시 데이터"],"ue":["Urban planning","Exhibitions","City data"],"film":"How a Flattened City Grew Back","line":"A projector paints Rotterdam's white model layer by layer, from the 1940 gap to today's towers.","dur":40,"gen":false,"img":"thumbs/white-model.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/white-model/"},{"s":"data-physical","n":"96","ko":"데이터 실물화","en":"Data Physicalization","cn":"数据实物化","aka":[],"c":"Data & Maps","ck":"데이터·지도","u":["연차 보고서","투자자 자료","에너지 데이터"],"ue":["Annual reports","Investor decks","Energy data"],"film":"Two Spirals","line":"Twelve years of wind and solar stacked as real plates, spiralling round a walnut dial until solar overtakes.","dur":39,"gen":false,"img":"thumbs/data-physical.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/data-physical/"},{"s":"transit-map","n":"97","ko":"지하철 노선도","en":"Transit Map","cn":"地铁线路图","aka":[],"c":"Data & Maps","ck":"데이터·지도","u":["교통","시간에 따른 성장","네트워크"],"ue":["Transport","Growth over time","Networks"],"film":"6 Kilometres","line":"A printed metro map grows from one 6 km line in 1993 to 21 lines and 906 km.","dur":47,"gen":false,"img":"thumbs/transit-map.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/transit-map/"},{"s":"map-explainer","n":"98","ko":"3D 지도 해설","en":"3D Map Explainer","cn":"立体地图解说","aka":[],"c":"Data & Maps","ck":"데이터·지도","u":["뉴스·지정학","에너지·무역·해운","강·국경·지형"],"ue":["News and geopolitics","Energy, trade and shipping","Rivers, borders and terrain"],"film":"Strait of Hormuz","line":"From the globe down into the strait a fifth of the world's oil squeezes through: two lanes, a cut through the sea floor, and pipelines that can carry only a fraction of it around.","dur":52,"gen":false,"img":"thumbs/map-explainer.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/map-explainer/"},{"s":"pip-simulation","n":"99","ko":"블롭 시뮬레이션","en":"Blob Simulation","cn":"小人模拟实验","aka":[],"c":"Data & Maps","ck":"데이터·지도","u":["진화·자연선택","게임이론·행위자 모델","전염병·대기열·시장"],"ue":["Evolution and natural selection","Game theory and agent-based models","Epidemics, queues and markets"],"film":"Is Faster Better?","line":"160 flocked Pips race for beans: the fast ones eat first and run dry first, and after 20 generations the board turns blue.","dur":52,"gen":false,"img":"thumbs/pip-simulation.jpg","demo":"https://lemomo-ai.github.io/lemo-opuscar/styles/pip-simulation/"}],"cats":[{"id":"Edit & Documentary","ko":"편집·다큐","count":8},{"id":"Painting & Illustration","ko":"회화·일러스트","count":5},{"id":"Sketch & Board","ko":"스케치·판서","count":7},{"id":"Traditional Crafts","ko":"전통 공예","count":7},{"id":"Print & Printmaking","ko":"인쇄·판화","count":8},{"id":"Graphic & Type","ko":"그래픽·타이포","count":8},{"id":"Line Diagrams","ko":"선 도해","count":8},{"id":"Cartoons","ko":"카툰","count":6},{"id":"Games","ko":"게임","count":4},{"id":"Film & Tape","ko":"필름·테이프","count":5},{"id":"Screens & Interfaces","ko":"화면·인터페이스","count":6},{"id":"Light & Lines","ko":"빛·선","count":5},{"id":"3D & Miniature","ko":"3D·미니어처","count":8},{"id":"Instruments & Evidence","ko":"계측·증거","count":8},{"id":"Data & Maps","ko":"데이터·지도","count":6}]};
+  var S = DATA.styles, C = DATA.cats;
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { cat: 'all', q: '', sel: null, ratio: '9:16', len: 40 };
+
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function norm(t) { return String(t).toLowerCase().replace(/\s+/g, ''); }
+  S.forEach(function (s) {
+    s.hay = norm([s.ko, s.en, s.cn, s.s, s.ck, s.c, s.film, s.line].concat(s.aka, s.u, s.ue).join('|'));
+  });
+
+  $('total').textContent = S.length;
+
+  // category chips
+  var chips = $('chips');
+  var all = [{ id: 'all', ko: '전체', count: S.length }].concat(C);
+  chips.innerHTML = all.map(function (c) {
+    return '<button class="chip" type="button" data-cat="' + esc(c.id) + '" aria-pressed="' + (c.id === 'all') + '">' +
+      esc(c.ko) + '<span class="ct">' + c.count + '</span></button>';
+  }).join('');
+  chips.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip'); if (!b) return;
+    state.cat = b.dataset.cat;
+    chips.querySelectorAll('.chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+    render();
+  });
+
+  // cards
+  var grid = $('grid');
+  grid.innerHTML = S.map(function (s, i) {
+    return '<button class="card" type="button" data-i="' + i + '" aria-pressed="false">' +
+      '<div class="thumb">' + (s.img ? '<img src="' + esc(s.img) + '" alt="' + esc(s.ko) + ' 예시 장면" loading="lazy" width="480" height="270">' : '') +
+      '<span class="num">No.' + esc(s.n) + '</span>' + (s.gen ? '<span class="gen" title="이미지 생성기가 따로 필요해요">✦ 생성기</span>' : '') + '</div>' +
+      '<div class="body"><span class="cat">' + esc(s.ck) + '</span>' +
+      '<p class="name">' + esc(s.ko) + '</p><span class="en">' + esc(s.en) + '</span>' +
+      '<div class="uses">' + s.u.map(function (u) { return '<span>' + esc(u) + '</span>'; }).join('') + '</div></div></button>';
+  }).join('');
+  var cards = grid.querySelectorAll('.card');
+
+  function render() {
+    var q = norm(state.q), n = 0;
+    S.forEach(function (s, i) {
+      var show = (state.cat === 'all' || s.c === state.cat) && (!q || s.hay.indexOf(q) !== -1);
+      cards[i].hidden = !show; if (show) n++;
+    });
+    var catName = state.cat === 'all' ? '전체' : C.filter(function (c) { return c.id === state.cat; })[0].ko;
+    $('count').innerHTML = esc(catName) + (state.q ? ' · “' + esc(state.q) + '”' : '') + ' — <b>' + n + '</b>개 화풍';
+    $('empty').hidden = n > 0;
+    $('clear').hidden = !state.q;
+  }
+
+  var q = $('q');
+  q.addEventListener('input', function () { state.q = q.value.trim(); render(); });
+  $('clear').addEventListener('click', function () { q.value = ''; state.q = ''; render(); q.focus(); });
+
+  // order slip
+  var dock = $('dock'), topic = $('topic'), len = $('len');
+  grid.addEventListener('click', function (e) {
+    var c = e.target.closest('.card'); if (!c) return;
+    select(+c.dataset.i);
+  });
+  function select(i) {
+    state.sel = S[i];
+    cards.forEach(function (c) { c.setAttribute('aria-pressed', +c.dataset.i === i); });
+    var s = state.sel;
+    $('d-img').src = s.img || ''; $('d-img').alt = s.ko + ' 예시 장면';
+    $('d-meta').textContent = 'No.' + s.n + ' · ' + s.ck + (s.dur ? ' · 데모 ' + s.dur + '초' : '');
+    $('d-name').textContent = s.ko;
+    $('demo').href = s.demo;
+    $('demo').setAttribute('aria-label', s.ko + ' 데모 영상 보기 (새 탭)');
+    var wasHidden = dock.hidden;
+    dock.hidden = false; document.body.classList.add('docked');
+    update();
+    if (wasHidden) setTimeout(function () { topic.focus({ preventScroll: true }); }, 60);
+  }
+  function closeDock() {
+    dock.hidden = true; document.body.classList.remove('docked');
+    cards.forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+    state.sel = null;
+  }
+  $('close').addEventListener('click', closeDock);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !dock.hidden) closeDock(); });
+
+  len.addEventListener('input', function () { state.len = +len.value; update(); });
+  topic.addEventListener('input', function () { topic.classList.remove('warn'); update(); });
+  document.querySelectorAll('.ratio').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.ratio = b.dataset.r;
+      document.querySelectorAll('.ratio').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      update();
+    });
+  });
+
+  // 9:16 → "으로" (육), 16:9 → "로" (구), 1:1 → "로" (일, ㄹ)
+  function josa(r) { return r === '9:16' ? '으로' : '로'; }
+  function sentence(t) {
+    var s = state.sel;
+    return s.ko + ' 화풍으로 ' + (t || '△△') + ' 주제 ' + state.len + '초 영상을 ' + state.ratio + josa(state.ratio) + ' 만들어줘';
+  }
+  function update() {
+    if (!state.sel) return;
+    $('len-val').innerHTML = state.len + '<small>초</small>';
+    var t = topic.value.trim(), s = state.sel;
+    $('sentence').innerHTML = '<mark>' + esc(s.ko) + '</mark> 화풍으로 ' +
+      (t ? '<mark>' + esc(t) + '</mark>' : '<mark class="ph">(주제)</mark>') +
+      ' 주제 <mark>' + state.len + '초</mark> 영상을 <mark>' + state.ratio + '</mark>' + josa(state.ratio) + ' 만들어줘';
+  }
+
+  var toastT;
+  function toast(msg) {
+    var el = $('toast'); el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(function () { el.classList.remove('on'); }, 2200);
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    if (ok) { toast('복사했어요. 붙여넣기 하세요.'); return; }
+    var r = document.createRange(); r.selectNodeContents($('sentence'));
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    toast('자동 복사가 막혀 있어요. 선택된 문장을 Ctrl+C(⌘C)로 복사하세요.');
+  }
+  $('copy').addEventListener('click', function () {
+    var t = topic.value.trim();
+    if (!t) { topic.classList.add('warn'); topic.focus(); toast('영상 주제를 먼저 적어 주세요.'); return; }
+    var text = sentence(t);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast('복사했어요. 붙여넣기 하세요.'); }, function () { fallbackCopy(text); });
+    } else fallbackCopy(text);
+  });
+
+  render();
+})();
+</script>
